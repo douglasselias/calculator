@@ -26,7 +26,6 @@ static int tokens_count = 0;
 void next_token() {
   token_index++;
   current_token = tokens[token_index];
-  // printf("Token: %d, %s\n", current_token->type, current_token->text);
 }
 
 int parse_number() {
@@ -51,7 +50,6 @@ int parse_expression(int left) {
   switch (current_token->text[0]) {
     case '+':
       next_token();
-      // printf("Op: %d, %s\n", left,current_token->text);
       return left + expression(1);
     case '-':
       next_token();
@@ -115,8 +113,8 @@ Token** tokenizer() {
     switch(current_char) {
       case '+': {
         tokens[tokens_count] = malloc(sizeof(Token));
-        // tokens[tokens_count] = &(Token){OP_SUM, "+"};
         /// @todo: can I delete this?
+        // tokens[tokens_count] = &(Token){OP_SUM, "+"};
         tokens[tokens_count]->type = OP_SUM;
         // tokens[tokens_count]->text = strdup("+");
         tokens[tokens_count]->text = "+";
@@ -171,10 +169,6 @@ Token** tokenizer() {
     i++;
     current_char = input[i];
   }
-
-  // for(int index = 0; index < tokens_count; index++) {
-  //   TraceLog(LOG_WARNING, TextFormat("(%s)", tokens[index]->text));
-  // }
 
   return tokens;
 }
