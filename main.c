@@ -1,28 +1,33 @@
-#include "stdlib.h"
-#include "math.h"
-#include "stdio.h"
-#include "ctype.h"
+#include <stdlib.h>
+#include <math.h>
+#include <stdio.h>
+#include <ctype.h>
 
 #include "raylib.h"
 #include "raymath.h"
 
-#include "screen.c"
 #include "text.c"
 #include "parser.c"
 
-void log_float(const char* name, float f) {
-  TraceLog(LOG_WARNING, TextFormat("%s: %2f", name, f));
-}
-
 int main() {
-  init_screen();
+  int screen_width  = 400;
+  int screen_height = 600;
+
+  SetTraceLogLevel(LOG_WARNING);
+  InitWindow(screen_width, screen_height, "Simple Calculator");
+  SetTargetFPS(60);
+
   init_font();
-  init_tokens();
 
   Color default_tile_bg = (Color){19, 53, 74, 255};
-  Color hover_tile_bg = (Color){19*0.5, 53*0.5, 74*0.5, 255};
-
-  char buttons[4][4] = {
+  Color hover_tile_bg   = (Color){};
+  hover_tile_bg.r = default_tile_bg.r * 0.5;
+  hover_tile_bg.g = default_tile_bg.g * 0.5;
+  hover_tile_bg.b = default_tile_bg.b * 0.5;
+  hover_tile_bg.a = 255;
+  
+  char buttons[4][4] =
+  {
     {'+', '0', '<', '='},
     {'-', '7', '8', '9'},
     {'*', '4', '5', '6'},
@@ -30,96 +35,90 @@ int main() {
   };
   clear_input();
 
-  int tile_size = 100;
-
+  int tile_size  = 100;
   int width_rect = screen_width;
   Rectangle clear_rect = {0, 4 * tile_size, width_rect, tile_size};
 
-  while (!WindowShouldClose()) {
+  int keys[] =
+  {
+    KEY_ZERO,
+    KEY_ONE,
+    KEY_TWO,
+    KEY_THREE,
+    KEY_FOUR,
+    KEY_FIVE,
+    KEY_SIX,
+    KEY_SEVEN,
+    KEY_EIGHT,
+    KEY_NINE,
+  };
+  int NUMPAD_SIZE = 10;
+
+  while (!WindowShouldClose())
+  {
     float dt = GetFrameTime();
     Vector2 mouse_position = GetMousePosition();
     int x = mouse_position.x / tile_size;
     int y = mouse_position.y / tile_size;
 
-  {// numbers
-    if(IsKeyPressed(KEY_ZERO)) {
-      input[input_size++] = '0';
+    for(int i = 0; i < NUMPAD_SIZE; i++)
+    {
+      if(IsKeyPressed(keys[i]))
+      {
+        input[input_size++] = i + '0';
+      }
     }
 
-    if(IsKeyPressed(KEY_ONE)) {
-      input[input_size++] = '1';
-    }
-
-    if(IsKeyPressed(KEY_TWO)) {
-      input[input_size++] = '2';
-    }
-
-    if(IsKeyPressed(KEY_THREE)) {
-      input[input_size++] = '3';
-    }
-
-    if(IsKeyPressed(KEY_FOUR)) {
-      input[input_size++] = '4';
-    }
-
-    if(IsKeyPressed(KEY_FIVE)) {
-      input[input_size++] = '5';
-    }
-
-    if(IsKeyPressed(KEY_SIX)) {
-      input[input_size++] = '6';
-    }
-
-    if(IsKeyPressed(KEY_SEVEN)) {
-      input[input_size++] = '7';
-    }
-
-    if(IsKeyPressed(KEY_EIGHT)) {
-      input[input_size++] = '8';
-    }
-
-    if(IsKeyPressed(KEY_NINE)) {
-      input[input_size++] = '9';
-    }
-  }
-
-    if(IsKeyPressed(KEY_KP_ADD)) {
+    if(IsKeyPressed(KEY_KP_ADD))
+    {
       input[input_size++] = '+';
     }
 
-    if(IsKeyPressed(KEY_MINUS)) {
+    if(IsKeyPressed(KEY_MINUS))
+    {
       input[input_size++] = '-';
     }
 
-    if(IsKeyPressed(KEY_KP_MULTIPLY)) {
+    if(IsKeyPressed(KEY_KP_MULTIPLY))
+    {
       input[input_size++] = '*';
     }
 
-    if(IsKeyPressed(KEY_SLASH)) {
+    if(IsKeyPressed(KEY_SLASH))
+    {
       input[input_size++] = '/';
     }
 
-    if(IsKeyPressed(KEY_EQUAL)) {
+    if(IsKeyPressed(KEY_EQUAL))
+    {
       evaluate();
     }
 
-    if(IsKeyPressed(KEY_BACKSPACE)) {
+    if(IsKeyPressed(KEY_BACKSPACE))
+    {
       input[--input_size] = '\0';
     }
 
-    if(IsMouseButtonPressed(0)) {
-      if(x < 4 && y < 4) {
+    if(IsMouseButtonPressed(0))
+    {
+      if(x < 4 && y < 4)
+      {
         char button = buttons[y][x];
         if(button == '=') {
           evaluate();
-        } else if (button == '<') {
+        }
+        else if (button == '<')
+        {
           input[--input_size] = '\0';
-        } else {
+        }
+        else
+        {
           input[input_size++] = button;
         }
       }
 
-      if(CheckCollisionPointRec(mouse_position, clear_rect)) {
+      if(CheckCollisionPointRec(mouse_position, clear_rect))
+      {
         clear_input();
       }
     }
@@ -129,20 +128,25 @@ int main() {
     BeginDrawing();
     ClearBackground(BLACK);
 
-    for(int i = 0; i < 4; i++) {
-      for(int j = 0; j < 4; j++) {
+    for(int i = 0; i < 4; i++)
+    {
+      for(int j = 0; j < 4; j++)
+      {
         int half_size = tile_size / 2;
         int j_size = j * tile_size;
         int i_size = i * tile_size;
 
         Rectangle tile_rect = {j_size, i_size, tile_size - 1, tile_size - 1};
         Color tile_bg = default_tile_bg;
-        if(CheckCollisionPointRec(mouse_position, tile_rect)) {
+
+        if(CheckCollisionPointRec(mouse_position, tile_rect))
+        {
           tile_bg = hover_tile_bg;
         }
+
         DrawRectangleRec(tile_rect, tile_bg);
 
-        const char* text = TextFormat("%c", buttons[i][j]);
+        const char *text = TextFormat("%c", buttons[i][j]);
         if(buttons[i][j] == '<') text = "⌫";
         int half_width = measure_text(text).x / 2;
         draw_text(text, (Vector2){j_size + half_size - half_width, i_size + half_size - 30});
@@ -150,15 +154,16 @@ int main() {
     }
 
     Color tile_bg = default_tile_bg;
-    if(CheckCollisionPointRec(mouse_position, clear_rect)) {
+    if(CheckCollisionPointRec(mouse_position, clear_rect))
+    {
       tile_bg = hover_tile_bg;
     }
     DrawRectangleRec(clear_rect, tile_bg);
 
-    char* text = "CLEAR";
+    char *text = "CLEAR";
     Vector2 text_size = measure_text(text);
-    int half_width = text_size.x / 2;
-    int half_height = text_size.y / 4; // @todo: not sure why 4 is the correct value
+    int half_width  = text_size.x / 2;
+    int half_height = text_size.y / 4; // TODO: Not sure why 4 is the correct value.
     draw_text(text, (Vector2){(width_rect / 2) - half_width, clear_rect.y + half_height});
 
     draw_text(input, (Vector2){30, screen_height - 70});

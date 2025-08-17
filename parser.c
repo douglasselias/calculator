@@ -1,41 +1,45 @@
-#include "string.h"
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
 
-typedef enum {
-  NUMBER  = 1,
-  FLOAT   = 2,
-  OP_SUM  = 3,
-  OP_SUB  = 4,
-  OP_MULT = 5,
-  OP_DIV  = 6,
-} TokenTypes;
+char input[20];
+int input_size = 0;
 
-typedef struct {
-  TokenTypes type;
-  char* text;
+void clear_input()
+{
+  memset(input, '\0', 20);
+  input_size = 0;
+}
+
+typedef enum
+{
+  OPERATOR,
+  NUMBER,
+  LEFT_PAREN,
+  RIGHT_PAREN,
+} TokenType;
+
+typedef struct
+{
+  TokenType type;
+  union
+  {
+    char operator;
+    int  number;
+  };
 } Token;
 
-static char input[20] = {0};
-static int input_size = 0;
+typedef struct
+{
+  Token *data;
+  int   size;
+  int   i;
+} Tokens;
 
-static Token* current_token = NULL;
-static int token_index = 0;
-
-static Token** tokens;
-static int tokens_count = 0;
-
-void next_token() {
-  token_index++;
-  current_token = tokens[token_index];
-}
-
-int parse_number() {
-  int value = TextToInteger(current_token->text);
-  next_token();
-  return value;
-}
-
-int precedence(char token) {
-  switch (token) {
+int precedence_table(char operator)
+{
+  switch(operator)
+  {
     case '+': return 1;
     case '-': return 1;
     case '*': return 2;
@@ -44,148 +48,120 @@ int precedence(char token) {
   }
 }
 
-int expression(int binding_power);
+Tokens tokenize()
+{
+  Tokens tokens = {};
+  tokens.data = calloc(1, sizeof(Token) * 100);
 
-int parse_expression(int left) {
-  switch (current_token->text[0]) {
-    case '+':
-      next_token();
-      return left + expression(1);
-    case '-':
-      next_token();
-      return left - expression(1);
-    case '*':
-      next_token();
-      return left * expression(2);
-    case '/':
-      next_token();
-      return left / expression(2);
-    default:
-      return 0;
-  }
-}
+  size_t len = strlen(input);
 
-int expression(int min_precedence) {
-  int left = 0;
+  for(int i = 0; i < len; i++)
+  {
+    char c = input[i];
 
-  if(current_token == NULL) return left;
+    if(c == ' ') continue;
 
-  if(current_token->type == NUMBER) {
-    left = parse_number();
-  }
-
-  if(current_token == NULL) return left;
-
-  while (precedence(current_token->text[0]) > min_precedence) {
-    left = parse_expression(left);
-    if(current_token == NULL) return left;
-  }
-
-  return left;
-}
-
-void clear_input() {
-  for(int i = 0; i < 20; i++) input[i] = '\0';
-  input_size = 0;
-}
-
-int MAX_TOKENS = 100;
-void reset_tokens() {
-  for(int i = 0; i < MAX_TOKENS; i++) {
-    tokens[i] = NULL;
-  }
-  tokens_count = 0;
-}
-
-void init_tokens() {
-  tokens = malloc(MAX_TOKENS * sizeof(Token*));
-  reset_tokens();
-}
-
-Token** tokenizer() {
-  int i = 0;
-
-  char current_char = input[i];
-  bool is_tokenizing_number = false;
-  int start_index = 0;
-  int end_index = 0;
-  while(current_char != '\0') {
-    switch(current_char) {
-      case '+': {
-        tokens[tokens_count] = malloc(sizeof(Token));
-        /// @todo: can I delete this?
-        // tokens[tokens_count] = &(Token){OP_SUM, "+"};
-        tokens[tokens_count]->type = OP_SUM;
-        // tokens[tokens_count]->text = strdup("+");
-        tokens[tokens_count]->text = "+";
-
-        tokens_count++;
-        break;
-      }
-      case '-': {
-        tokens[tokens_count] = malloc(sizeof(Token));
-        tokens[tokens_count]->type = OP_SUB;
-        tokens[tokens_count]->text = "-";
-        tokens_count++;
-        break;
-      }
-      case '*': {
-        tokens[tokens_count] = malloc(sizeof(Token));
-        tokens[tokens_count]->type = OP_MULT;
-        tokens[tokens_count]->text = "*";
-        tokens_count++;
-        break;
-      }
-      case '/': {
-        tokens[tokens_count] = malloc(sizeof(Token));
-        tokens[tokens_count]->type = OP_DIV;
-        tokens[tokens_count]->text = "/";
-        tokens_count++;
-        break;
-      }
-      default: {
-        if(isdigit(current_char)) {
-          start_index = i;
-          while(isdigit(current_char)) {
-            i++;
-            current_char = input[i];
-          }
-          end_index = i;
-          int number_length = end_index - start_index;
-
-          tokens[tokens_count] = malloc(sizeof(Token));
-          tokens[tokens_count]->type = NUMBER;
-          tokens[tokens_count]->text = malloc((number_length) * sizeof(char));
-          strncpy(tokens[tokens_count]->text, input + start_index, number_length);
-          tokens[tokens_count]->text[number_length] = '\0';
-          tokens_count++;
-
-          start_index = 0;
-          end_index = 0;
-          continue;
-        }
-      }
+    if(c == '(')
+    {
+      tokens.data[tokens.size++] = (Token){.type = LEFT_PAREN};
+      continue;
     }
-    i++;
-    current_char = input[i];
+
+    if(c == ')')
+    {
+      tokens.data[tokens.size++] = (Token){.type = RIGHT_PAREN};
+      continue;
+    }
+
+    if(c == '+' || c == '-' || c == '*' || c == '/')
+    {
+      tokens.data[tokens.size++] = (Token){.type = OPERATOR, .operator = c};
+      continue;
+    }
+
+    if('0' <= c && c <= '9')
+    {
+      int number = 0;
+
+      while('0' <= input[i] && input[i] <= '9')
+      {
+        int digit = input[i] - '0';
+        number *= 10;
+        number += digit;
+        i++;
+      }
+      i--; // Undoing last increment to correct the index for the next token.
+
+      tokens.data[tokens.size++] = (Token){.type = NUMBER, .number = number};
+      continue;
+    }
   }
 
   return tokens;
 }
 
-void evaluate() {
-  reset_tokens();
-  tokenizer();
-  for(int index = 0; index < tokens_count; index++) {
-    TraceLog(LOG_WARNING, TextFormat("(%s)", tokens[index]->text));
+int pratt_parser(Tokens *tokens, int min_precedence)
+{
+  int left = 0;
+
+  Token token = tokens->data[tokens->i];
+
+  switch(token.type)
+  {
+    case NUMBER:
+    {
+      left = token.number;
+      tokens->i++;
+      if(tokens->i == tokens->size) return left;
+      break;
+    }
+    case LEFT_PAREN:
+    {
+      tokens->i++; // Skip left paren
+      left = pratt_parser(tokens, 0);
+      tokens->i++; // Skip right paren
+    }
+    case OPERATOR:
+    {
+      if(token.operator == '-')
+      {
+        tokens->i++; // Skip the '-'
+        int operand = pratt_parser(tokens, 3); // Precedence 3 (higher than * and /)
+        left = -operand;
+      }
+    }
   }
-  current_token = tokens[0];
-  int result = expression(0);
+
+  token = tokens->data[tokens->i];
+
+  while(precedence_table(token.operator) > min_precedence)
+  {
+    tokens->i++;
+
+    char operator = token.operator;
+    int right = pratt_parser(tokens, precedence_table(operator));
+
+    switch(operator)
+    {
+      case '+': left += right; break;
+      case '-': left -= right; break;
+      case '*': left *= right; break;
+      case '/': left /= right; break;
+    }
+
+    token = tokens->data[tokens->i];
+  }
+
+  return left;
+}
+
+void evaluate()
+{
+  Tokens tokens = tokenize();
+  int result = pratt_parser(&tokens, 0);
+  free(tokens.data);
+
   clear_input();
   sprintf(input, "%d", result);
-  
-  while(input[input_size] != '\0') {
-    input_size++;
-  }
-  token_index = 0;
+  input_size = (int)strlen(input);
 }
